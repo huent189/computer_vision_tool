@@ -1,7 +1,11 @@
-from _typeshed import Self
 import glob, os
 import cv2, imageio
 #TODO: test code 
+def save_image(im, p):
+    base_dir = os.path.split(p)[0]
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+    cv2.imwrite(p, im)
 def read_im(p):
     im = cv2.imread(p)
     assert im is not None, p
@@ -47,26 +51,24 @@ class BulkCrop():
             self.refPt.append((x, y))
             self.cropping = False
             # draw a rectangle around the region of interest
-            cv2.rectangle(self.image, self.refPt[0], self.refPt[1], (0, 0, 255), 15)
+            cv2.rectangle(self.image, self.refPt[0], self.refPt[1], (0, 0, 255), self.stroke_size)
             cv2.imshow("image", self.image)
     def draw_and_crop(self, im_path, refPt, name):
         im = read_im(im_path)
         assert im is not None, im_path
         im = cv2.resize(im, (self.fixed_size[1], self.fixed_size[0]))
         roi = im[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]].copy()
-        cv2.rectangle(im, refPt[0], refPt[1], (0, 0, 255), 15)
+        cv2.rectangle(im, refPt[0], refPt[1], (0, 0, 255), self.stroke_size)
         print(os.path.join('crop', name))
-        cv2.imwrite(os.path.join(self.prefix_crop, name), roi)
-        cv2.imwrite(os.path.join(self.prefix_rect, name), im)
+        save_image(roi, os.path.join(self.prefix_crop, name))
+        save_image(im, os.path.join(self.prefix_rect, name))
         
 
-    def parse_argument(self, parser):
-        parser.add_argument('--inputs', type=str, nargs='+', default=None)
-        parser.add_argument('--prefix_crop', type=str, default='crop')
-        parser.add_argument('--prefix_rect', type=str, default='rect')
+    
     def __call__(self, args):
         self.prefix_rect = args.prefix_rect
         self.prefix_crop = args.prefix_crop
+        self.stroke_size = args.stroke_size
         paths = args.inputs
         self.image = read_im(paths[-1])
         self.fixed_size = self.image.shape
@@ -76,11 +78,11 @@ class BulkCrop():
         cv2.setMouseCallback("image", self.click_and_crop)
         while True:
         # display the image and wait for a keypress
-            cv2.imshow("image", image)
+            cv2.imshow("image", self.image)
             key = cv2.waitKey(1) & 0xFF
             # if the 'r' key is pressed, reset the cropping region
             if key == ord("r"):
-                image = clone.copy()
+                self.image = clone.copy()
             # if the 'c' key is pressed, break from the loop
             elif key == ord("c"):
                 break
@@ -97,3 +99,8 @@ class BulkCrop():
         # close all open windows
         cv2.destroyAllWindows()
 
+    def parse_argument(self, parser):
+        parser.add_argument('--inputs', type=str, nargs='+', default=None)
+        parser.add_argument('--prefix_crop', type=str, default='crop')
+        parser.add_argument('--prefix_rect', type=str, default='rect')
+        parser.add_argument('--stroke_size', type=int, default=15)

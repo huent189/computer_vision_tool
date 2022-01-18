@@ -138,3 +138,6 @@ dmypy.json
 cython_debug/
 ckpt/
 final_ckpt
+test/
+crop/
+rect/
